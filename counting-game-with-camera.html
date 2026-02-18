@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Counting Game with Camera & Purple Circles</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #1a1a2e;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #video-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 0;
+        }
+
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #b388ff, #7c4dff);
+            opacity: 0.5;
+            animation: float linear infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translate(0, 0) scale(1);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.5;
+            }
+            90% {
+                opacity: 0.5;
+            }
+            100% {
+                transform: translate(var(--tx), var(--ty)) scale(1.2);
+                opacity: 0;
+            }
+        }
+
+        #canvas-container {
+            position: relative;
+            z-index: 2;
+        }
+    </style>
+</head>
+<body>
+    <video id="video-background" autoplay playsinline></video>
+    <div id="canvas-container"></div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <script>
+        let recognition;
+        let currentNumber = 1;
+        let lastHeard = "";
+        let feedback = "Say the number 1";
+
+        const numberWords = {
+          1: ["one"],
+          2: ["two", "to", "too"],
+          3: ["three"],
+          4: ["four", "for"],
+          5: ["five"],
+          6: ["six"],
+          7: ["seven"],
+          8: ["eight"],
+          9: ["nine"],
+          10: ["ten"]
+        };
+
+        // Start webcam
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user' },
+                    audio: false 
+                });
+                const video = document.getElementById('video-background');
+                video.srcObject = stream;
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                feedback = "Camera access denied or not available";
+            }
+        }
+
+        function setup() {
+          let canvas = createCanvas(600, 300);
+          canvas.parent('canvas-container');
+          textAlign(CENTER, CENTER);
+          textSize(24);
+
+          // Start camera
+          startCamera();
+
+          const SpeechRecognition =
+            window.SpeechRecognition || window.webkitSpeechRecognition;
+
+          if (!SpeechRecognition) {
+            feedback = "Speech recognition not supported in this browser";
+            return;
+          }
+
+          recognition = new SpeechRecognition();
+          recognition.lang = "en-US";
+          recognition.continuous = true;
+          recognition.interimResults = false;
+
+          recognition.onresult = handleResult;
+          recognition.start();
+        }
+
+        function draw() {
+          background(26, 26, 46, 180); // Semi-transparent to see camera and circles
+
+          fill(255);
+          stroke(0);
+          strokeWeight(3);
+          text(`Current target: ${currentNumber}`, width / 2, 80);
+          text(`Last heard: "${lastHeard}"`, width / 2, 140);
+          text(feedback, width / 2, 200);
+        }
+
+        function handleResult(event) {
+          let lastResult = event.results[event.results.length - 1][0];
+          let spoken = lastResult.transcript.toLowerCase().trim();
+          lastHeard = spoken;
+
+          if (isCorrectNumber(spoken, currentNumber)) {
+            feedback = `✅ Correct! Now say ${currentNumber + 1}`;
+            currentNumber++;
+
+            if (currentNumber > 10) {
+              feedback = "🎉 Done! You counted to ten!";
+              recognition.stop();
+            }
+          } else {
+            feedback = `❌ Try again. Say ${currentNumber}`;
+          }
+        }
+
+        function isCorrectNumber(spoken, target) {
+          let validWords = numberWords[target];
+          return validWords.some(word => spoken.includes(word));
+        }
+
+        // Purple circles animation
+        function createCircle() {
+            const circle = document.createElement('div');
+            circle.classList.add('circle');
+            
+            const size = Math.random() * 80 + 20;
+            circle.style.width = `${size}px`;
+            circle.style.height = `${size}px`;
+            
+            circle.style.left = `${Math.random() * window.innerWidth}px`;
+            circle.style.top = `${Math.random() * window.innerHeight}px`;
+            
+            const tx = (Math.random() - 0.5) * 200;
+            const ty = (Math.random() - 0.5) * 200;
+            circle.style.setProperty('--tx', `${tx}px`);
+            circle.style.setProperty('--ty', `${ty}px`);
+            
+            const duration = Math.random() * 7 + 8;
+            circle.style.animationDuration = `${duration}s`;
+            circle.style.animationDelay = `${Math.random() * 5}s`;
+            
+            document.body.appendChild(circle);
+            
+            setTimeout(() => {
+                circle.remove();
+            }, (duration + 5) * 1000);
+        }
+
+        // Create initial circles
+        for (let i = 0; i < 15; i++) {
+            createCircle();
+        }
+
+        // Add new circles periodically
+        setInterval(createCircle, 2000);
+    </script>
+</body>
+</html>
