@@ -1,70 +1,45 @@
-let recognition;
-let currentNumber = 1;
-let lastHeard = "";
-let feedback = "Say the number 1";
+  let t = millis() * 0.001;
+  noStroke();
+  for (let l of leaves) {
+    let wob = sin(t*1.1 + l.wb) * 0.45;
+    l.x  += l.vx + wob;
+    l.y  += l.vy;
+    l.ang += l.spin;
 
-const numberWords = {
-  1: ["one"],
-  2: ["two", "to", "too"],
-  3: ["three"],
-  4: ["four", "for"],
-  5: ["five"],
-  6: ["six"],
-  7: ["seven"],
-  8: ["eight"],
-  9: ["nine"],
-  10: ["ten"]
-};
+    let fade = l.y < 80 ? l.al * (l.y/80) : l.al;
 
-function setup() {
-  createCanvas(600, 300);
-  textAlign(CENTER, CENTER);
-  textSize(24);
+    // Warm sage green or amber - light, not dark forest
+    let r2 = l.warm ? 130 : 175;
+    let g2 = l.warm ? 165 : 148;
+    let b2 = l.warm ?  85 :  48;
 
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
+    push();
+    translate(l.x, l.y);
+    rotate(l.ang);
+    fill(r2, g2, b2, fade * 255);
+    beginShape();
+    vertex(0, -l.sz);
+    bezierVertex( l.sz*.65, -l.sz*.4,  l.sz*.65,  l.sz*.4, 0,  l.sz);
+    bezierVertex(-l.sz*.65,  l.sz*.4, -l.sz*.65, -l.sz*.4, 0, -l.sz);
+    endShape(CLOSE);
+    stroke(r2*0.7, g2*0.7, b2*0.7, fade*100);
+    strokeWeight(0.55);
+    line(0, -l.sz*.75, 0, l.sz*.75);
+    pop();
 
-  if (!SpeechRecognition) {
-    feedback = "Speech recognition not supported in this browser";
-    return;
-  }
-
-  recognition = new SpeechRecognition();
-  recognition.lang = "en-US";
-  recognition.continuous = true;
-  recognition.interimResults = false;
-
-  recognition.onresult = handleResult;
-  recognition.start();
-}
-
-function draw() {
-  background(245);
-
-  text(`Current target: ${currentNumber}`, width / 2, 80);
-  text(`Last heard: "${lastHeard}"`, width / 2, 140);
-  text(feedback, width / 2, 200);
-}
-
-function handleResult(event) {
-  let lastResult = event.results[event.results.length - 1][0];
-  let spoken = lastResult.transcript.toLowerCase().trim();
-  lastHeard = spoken;
-
-  if (isCorrectNumber(spoken, currentNumber)) {
-    feedback = `✅ Correct! Now say ${currentNumber + 1}`;
-    currentNumber++;
-
-    if (currentNumber > 10) {
-      feedback = "🎉 Done! You counted to ten!";
-      recognition.stop();
-    }
-  } else {
-    feedback = `❌ Try again. Say ${currentNumber}`;
+    if (l.y < -30 || l.x < -40 || l.x > width+40) Object.assign(l, makeLeaf());
   }
 }
 
-function isCorrectNumber(spoken, target) {
-  let validWords = numberWords[target];
-  return validWords.some(word => spoken.includes(word));
+// ------------------------------------------------
+//  RIPPLES
+// ------------------------------------------------
+function addRipple(x, y, success) {
+  ripples.push({ x, y, r:0, al:0.45, success });
 }
+
+function drawRipples() {
+  ripples = ripples.filter(r => r.al > 0.01);
+  for (let r of ripples) {
+    r.r  += 2.8;
+    r.al *= 0.948;
